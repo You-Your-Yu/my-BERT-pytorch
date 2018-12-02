@@ -7,6 +7,7 @@ from torch.utils.data import DataLoader
 from ..model import BERTLM, BERT
 from .optimizer.optim_schedule import ScheduledOptim
 from .optimizer.adamw import AdamW
+import tensorboardX as tb
 
 
 class BERTTrainer:
@@ -23,7 +24,8 @@ class BERTTrainer:
     def __init__(self, bert: BERT, vocab_size: int,
                  train_dataloader: DataLoader, test_dataloader: DataLoader = None,
                  lr: float = 1e-4, betas=(0.9, 0.999), weight_decay: float = 0.01, warmup_steps=10000,
-                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10):
+                 with_cuda: bool = True, cuda_devices=None, log_freq: int = 10,
+                 tb_dir: string = None):
         """
         :param bert: BERT model which you want to train
         :param vocab_size: total word vocab size
@@ -34,6 +36,7 @@ class BERTTrainer:
         :param weight_decay: Adam optimizer weight decay param
         :param with_cuda: traning with cuda
         :param log_freq: logging frequency of the batch iteration
+        :param tb_dir: logging dir for tensorboard
         """
 
         # Setup cuda device for BERT training, argument -c, --cuda should be true
@@ -63,6 +66,8 @@ class BERTTrainer:
         self.next_criterion = nn.NLLLoss()
 
         self.log_freq = log_freq
+
+        self.tb_writer = tb.SummaryWriter(tb_dir) if tb_dir else None
 
         print("Total Parameters:", sum([p.nelement() for p in self.model.parameters()]))
 
@@ -134,6 +139,19 @@ class BERTTrainer:
                 # index = epoch * len(data_loader) + i
                 # for code in ["avg_loss", "mask_loss", "next_loss", "avg_next_acc"]:
                 #     print(json.dumps({"chart": code, "y": post_fix[code], "x": index}))
+                if self.tb_writer:
+                    num_iter =  len(data_iter)*epoch + i
+                    self.tb_writer.add_scalar('AverageLoss/{}'
+                    .format(str_code), post_fix['avg_loss'], num_iter)
+                    self.tb_writer.add_scalar('Loss/{}'
+                    .format(str_code), post_fix['loss'], num_iter)
+                    self.tb_writer.add_scalar('MaskLoss/{}'
+                    .format(str_code), post_fix['mask_loss'], num_iter)
+                    self.tb_writer.add_scalar('NextLoss/{}'
+                    .format(str_code), post_fix['next_loss'], num_iter)
+                    self.tb_writer.add_scalar('AverageNextAccuracy/{}'
+                    .format(str_code), post_fix['avg_next_acc'], num_iter)
+
 
         print("EP%d_%s, avg_loss=" % (epoch, str_code), avg_loss / len(data_loader), "total_acc=",
               total_correct * 100.0 / total_element)
