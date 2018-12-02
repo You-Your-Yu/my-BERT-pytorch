@@ -140,7 +140,7 @@ class BERTTrainer:
                 # for code in ["avg_loss", "mask_loss", "next_loss", "avg_next_acc"]:
                 #     print(json.dumps({"chart": code, "y": post_fix[code], "x": index}))
                 if self.tb_writer:
-                    num_iter =  len(data_iter)*epoch + i
+                    num_iter =  len(data_loader)*epoch + i
                     self.tb_writer.add_scalar('AverageLoss/{}'
                     .format(str_code), post_fix['avg_loss'], num_iter)
                     self.tb_writer.add_scalar('Loss/{}'
